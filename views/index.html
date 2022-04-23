@@ -59,16 +59,22 @@
         }
         .image-container{
             width: 250px;
-            /*border: 1px solid lightslategrey;*/
-            margin: 15px;
+            border: 1px solid #E6E6E6;
+            padding: 5px;
+            margin: 10px;
             box-shadow: inset 0 0 0 transparent, 0 5px 5px 0 #DeDeDe;
+            display: flex;
+            flex-flow: column;
+            justify-content: center;
+            align-items: center;
         }
         .result-img{
-            background: repeating-conic-gradient(#D0D0D0 0% 25%, transparent 0% 50%) 50% / 20px 20px;
+            background: repeating-conic-gradient(#E6E6E6 0% 25%, transparent 0% 50%) 50% / 20px 20px;
             object-fit: cover;
             display: block;
             max-width:230px;
-            max-height:95px;
+            max-height:180px;
+            min-height: 90px;
             width: auto;
             height: auto;
             margin: auto;
@@ -82,9 +88,9 @@
         }
         /* SPINNER JUST FOR DEMO */
         .spinner{
-            display:inline-block; width: 10px; height: 10px;
+            display:inline-block; width: 15px; height: 15px;
             border-radius: 50%;
-            box-shadow: inset -1px 0 0 1px #0000dd;
+            box-shadow: inset -1px 0 0 1px #00dd00;
         }
         .hidden{
             visibility: hidden;
@@ -95,21 +101,23 @@
         }
     </style>
     <script type="text/javascript">
+        function showLoading(){
+            document.getElementById('common_spinner').classList.remove('hidden');
+            document.getElementById('message').innerText = 'Searching...';
+        }
         function crawl(){
-			document.getElementById('crawl_btn_label').innerText = 'Crawling ...';
+			document.getElementById('message').innerText = 'Crawling ...';
 			document.getElementById('crawl_btn').disabled = true;
-			document.getElementById('spinner').classList.remove('hidden');
+			document.getElementById('common_spinner').classList.remove('hidden');
 
 			var xhr = new XMLHttpRequest();
-			xhr.open('get','/crawl?url=https://fordpro.com/en-us/',true);
-			// function execute after request is successful
+			xhr.open('get','/crawl?url=https://fordpro.com/en-us/&level=2',true);
 			xhr.onreadystatechange = function () {
 				if (this.readyState == 4 && this.status == 200) {
                     console.log("returned..")
                     document.getElementById('message').innerText = JSON.parse(this.responseText).message;
-					document.getElementById('crawl_btn_label').innerText = "Crawl Site";
 					document.getElementById('crawl_btn').disabled = false
-					document.getElementById('spinner').classList.add('hidden');
+					document.getElementById('common_spinner').classList.add('hidden');
 				}
 			}
 		    xhr.send(null)
@@ -119,7 +127,8 @@
 			document.getElementById('result-image').innerHTML = "";
             var query = document.getElementById('search-box').value;
             var xhr = new XMLHttpRequest();
-            xhr.open('get','/search?text='+query+'&type='+type,true);
+            var useBackup = document.getElementById('bk_up').checked;
+            xhr.open('get','/search?text='+query+'&type='+type+(useBackup?'&db=p_crawler_backup.json':''),true);
             // function execute after request is successful
             xhr.onreadystatechange = function () {
                 if (this.readyState == 4 && this.status == 200) {
@@ -153,6 +162,7 @@
 							const anchor = document.createElement('a');
 							anchor.appendChild(document.createTextNode(r.title));
 							anchor.href = r.url;
+                            anchor.target = '_blank'
 							pageDescriptor.appendChild(anchor);
 							const body = document.createElement('p');
 							body.appendChild(document.createTextNode(r.meta_description||r.body_content.substring(0,300)+' ...'));
@@ -172,7 +182,8 @@
                    	        const anchor = document.createElement('a');
                             anchor.appendChild(document.createTextNode(r.title));
                    	        anchor.href = r.url;
-							pageDescriptor.appendChild(anchor);
+                            anchor.target = '_blank'
+                            pageDescriptor.appendChild(anchor);
                             const body = document.createElement('p');
                             body.appendChild(document.createTextNode(r.meta_description?.length>100?
                                 r.meta_description:r.body_content.substring(0,300)+' ...'));
@@ -188,12 +199,14 @@
 							img.className='result-img'
                             const imgLink = document.createElement('a');
 							imgLink.href = r.url;
-							imgLink.appendChild(img);
+                            imgLink.target = '_blank'
+                            imgLink.appendChild(img);
 							newElem.appendChild(imgLink);
 							const anchor = document.createElement('a')
 							anchor.appendChild(document.createTextNode(r.title||"<no-title>"));
 							anchor.href = r.links?.[0];
-							newElem.appendChild(anchor);
+                            anchor.target = '_blank'
+                            newElem.appendChild(anchor);
 							newElem.className='image-container'
 							imageResultElement.appendChild(newElem);
 							count++;
@@ -201,6 +214,7 @@
                    });
                 document.getElementById('result-image').innerHTML=imageResultElement.innerHTML;
                 document.getElementById('result').innerHTML=pageResultElement.innerHTML;
+                document.getElementById('common_spinner').classList.add('hidden');
                 }
             }
             // Sending our request
@@ -216,15 +230,17 @@
         <span id="spinner" class="spinner rotate hidden"></span>
        </button>
         <span id="message"></span>
+        <span id="common_spinner" class="spinner rotate hidden"></span>
     </div>
     <div>
     <div class="search-bar">
         <label for="search-box">Search Text</label>
         <input id="search-box" placeholder="Search..."/>
-        <button onclick="search()">All</button>
-        <button onclick="search('page')">Pages</button>
-        <button onclick="search('image')">Images</button>
-        <button onclick="search('pdf')">PDFs</button>
+        <button onclick="showLoading();search()">All</button>
+        <button onclick="showLoading();search('page');">Pages</button>
+        <button onclick="showLoading();search('image')">Images</button>
+        <button onclick="showLoading();search('pdf')">PDFs</button>
+        <label><input id="bk_up" type="checkbox"/>Large DataSet</label>
     </div>
     </div>
 </div>

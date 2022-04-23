@@ -7,7 +7,7 @@ app.set('views', __dirname + '/views');
 app.engine('html', require('ejs').renderFile);
 app.use(express.static('public'));
 
-const maxLevel = 3;
+let maxLevel = 2;
 const crawlQueue = [];
 const pdfQueue = [];
 const visitedUrls = [];
@@ -47,7 +47,7 @@ async function getInnerText(page, selector) {
 }
 
 function isValidURL(string) {
-	const res = string.match(/(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g);
+	const res = string.match(/(http(s)?:\/\/.)(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g);
 	return (res !== null)
 };
 
@@ -86,7 +86,7 @@ async function fetchDocumentInfosPuppeteer(url) {
 
 	// Navigate to the page
 	console.log(`Navigating to ${url}...`);
-	await page.goto(url, {waitUntil: 'networkidle0'});
+	await page.goto(url, {waitUntil: 'networkidle0', timeout: 10000});
 	sleep(10)
 	// Wait for the required DOM to be rendered
 	await page.waitForSelector('body');
@@ -183,10 +183,10 @@ async function crawlNext() {
 	const queueItem = crawlQueue.shift();
 	const level = queueItem.level;
 	const url = queueItem.url;
-	console.log('queue size:', crawlQueue.length, ' visited: ', Object.keys(visitedUrls).length, ' level: ', level, 'documents: ', documents.length);
 	if (url.endsWith('.pdf')) {
 		await fetchDocumentInfosPDF(url)
 	} else if (level < maxLevel && isNotVisited(url)) {
+		console.log('queue size:', crawlQueue.length, ' visited: ', Object.keys(visitedUrls).length, ' level: ', level, 'documents: ', documents.length);
 		try {
 			const doc = await fetchDocumentInfosPuppeteer(url);
 			if (doc) {
@@ -206,17 +206,16 @@ async function crawlNext() {
 	await crawlNext();
 }
 
-startCrawl = async (url) => {
+startCrawl = async (url, level) => {
 	browser = await startBrowser();
+	if(level!=='')
+		maxLevel = Number(level);
 	try {
 		crawlQueue.push({
 			url: url,
 			level: 0
 		})
-		crawlQueue.push({
-			url: 'https://media.ford.com/content/fordmedia/fna/us/en/media-kits/2021/ford-pro.html',
-			level: maxLevel - 1
-		})
+
 		await crawlNext();
 		write('p_crawler.json');
 		console.log(`Successfully crawled ${documents.length} pages`)
@@ -265,18 +264,24 @@ app.get("/", (req, res) => {
 })
 app.get("/search", (req, res) => {
 	let rawData = fs.readFileSync('p_crawler.json');
-	if (rawData.length < 10)
-		rawData = fs.readFileSync('p_crawler_backup.json');
+	if(req.query.db && req.query.db.endsWith('.json'))
+		rawData = fs.readFileSync(req.query.db);
+
 	jsonData = JSON.parse(rawData);
 	const docs = (req.query.type=='undefined')?
 		jsonData:jsonData.filter(i=>i.type===req.query.type);
 	res.json(docs.filter((d) => queryMatch(d, req.query.text.toLowerCase())))
 })
 app.get("/crawl", async (req, res) => {
-	console.log('Started crawling')
-	await startCrawl(req.param('url'));
-	const msg = 'Crawled ' + documents.length + ' documents';
+	const start = Date.now();
+	console.time('crawl_time');
+	console.log('Started crawling at:', new Date().toUTCString());
+	await startCrawl(req.query.url, req.query.level);
+	const end = Date.now();
+	const msg = 'Crawled ' + documents.length + ' links in ' + ((end-start)/1000).toFixed(2)+' secs.';
 	console.log(msg)
+	console.log('end time', new Date().toUTCString());
+	console.timeEnd('crawl_time');
 	res.json({
 		'message': msg
 	});
