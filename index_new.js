@@ -222,7 +222,7 @@ startCrawl = async (url, level) => {
 	} catch (e) {
 		console.log('Error', e);
 	}
-	if (browser) browser.close();
+	if (browser) await browser.close();
 	return 'complete';
 }
 
