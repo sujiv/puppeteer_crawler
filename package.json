@@ -1,0 +1,34 @@
+{
+  "name": "puppeteer_scraper",
+  "version": "1.0.0",
+  "description": "ford-pro web crawler",
+  "main": "index_new.js",
+  "scripts": {
+    "test": "echo 'No test for now'",
+    "start": "node index_new.js"
+  },
+  "author": "Sujiv",
+  "license": "ISC",
+  "dependencies": {
+    "dom-parser": "^0.1.6",
+    "express": "^4.17.3",
+    "pdf2html": "^2.6.6",
+    "puppeteer": "^13.5.2"
+  },
+  "devDependencies": {
+    "ejs": "^3.1.6",
+    "pdf-parse": "^1.1.1",
+    "pdf2json": "^2.0.1",
+    "pdfjs": "^2.4.7",
+    "request": "^2.88.2"
+  },
+  "eslintConfig": {
+    "overrides": [
+      {
+        "rules": {
+          "import/no-anonymous-default-export": "off"
+        }
+      }
+    ]
+  }
+}
