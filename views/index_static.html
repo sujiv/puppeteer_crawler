@@ -1,0 +1,274 @@
+<html>
+<head>
+    <title>Test Search Page</title>
+    <style>
+        .nav-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: flex;
+            margin: 0;
+            width: 100vw;
+            background-color: #00095B;
+            padding: 10px;
+            color: white;
+            font-family: "Ford Antenna";
+        }
+
+        .crawler {
+            min-width: 55vw;
+        }
+
+        .search-bar {
+            position: relative;
+            min-width: 320px;
+            float: right;
+            /*min-height: 50px;*/
+        }
+
+        a {
+            margin: 5px;
+            font-family: "Ford Antenna Cond";
+            font-weight: 500;
+            font-size: 12pt;
+        }
+
+        .result-item {
+            color: #6e6e6e;
+            /*border: 1px solid grey;*/
+            box-shadow: inset 0 0 0 transparent, 0 5px 5px 0 #DeDeDe;
+            margin: 10px;
+            padding: 5px 10px;
+            display: flex;
+            max-width: 950px;
+            font-size: 12pt;
+            font-family: 'fordngbs-antenna-re', arial, helvetica, sans-serif;
+            line-height: 16pt;
+        }
+
+        .thumbnail {
+            padding: 0 5px 0 0;
+            margin: 10px 10px 5px 0px;
+            box-shadow: inset 0 0 0 transparent, 0 4px 4px 0 #6e6e6e;
+        }
+
+        .result-image-only {
+            margin-top: 50px;
+            display: flex;
+            max-width: 100vw;
+            overflow-x: auto;
+            flex-wrap: wrap;
+            /*justify-content: space-evenly;*/
+        }
+
+        .icon {
+            object-fit: scale-down;
+        }
+
+        .image-container {
+            width: 250px;
+            border: 1px solid #E6E6E6;
+            padding: 5px;
+            margin: 10px;
+            box-shadow: inset 0 0 0 transparent, 0 5px 5px 0 #DeDeDe;
+            display: flex;
+            flex-flow: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .result-img {
+            outline: 1px solid rgba(200, 200, 200, 0.5);
+            background: repeating-conic-gradient(#E6E6E6 0% 25%, transparent 0% 50%) 50% / 20px 20px;
+            object-fit: cover;
+            display: block;
+            /*max-width:230px;*/
+            max-height: 180px;
+            /*min-height: 90px;*/
+            width: 100%;
+            height: 100%;
+            margin: auto;
+        }
+
+        /* ENDLESS ROTATE */
+        .rotate {
+            animation: rotate 1.5s linear infinite;
+        }
+
+        @keyframes rotate {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* SPINNER JUST FOR DEMO */
+        .spinner {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            box-shadow: inset -1px 0 0 1px #00dd00;
+        }
+
+        .hidden {
+            visibility: hidden;
+        }
+
+        button.disabled,
+        button[disabled] {
+            background-color: #DeDeDe;
+        }
+    </style>
+    <script type="text/javascript" language="javascript" src="data/p_crawler.js"></script>
+    <script type="text/javascript">
+		function filterResults(docs, query, type) {
+			const text = query.toLowerCase();
+			return docs.filter(k => type?k.type===type:true)
+                .filter((doc) => Object.keys(doc)
+				.filter(k => ['header', 'meta_description', 'body_content', 'title'].includes(k))
+				.filter(k => (doc[k] || '').toLowerCase().includes(text))
+				.length > 0);
+		}
+
+		function showLoading() {
+			document.getElementById('common_spinner').classList.remove('hidden');
+			document.getElementById('message').innerText = 'Searching...';
+		}
+
+		function crawl() {
+			document.getElementById('message').innerText = 'Crawling ...';
+			document.getElementById('crawl_btn').disabled = true;
+			document.getElementById('common_spinner').classList.remove('hidden');
+
+			console.log(getData());
+			var xhr = new XMLHttpRequest();
+			xhr.open('get', '/crawl?url=https://fordpro.com/en-us/&level=2', true);
+			xhr.onreadystatechange = function () {
+				if (this.readyState == 4 && this.status == 200) {
+					console.log("returned..")
+					document.getElementById('message').innerText = JSON.parse(this.responseText).message;
+					document.getElementById('crawl_btn').disabled = false
+					document.getElementById('common_spinner').classList.add('hidden');
+				}
+			}
+			xhr.send(null)
+		}
+
+		function search(type) {
+			document.getElementById('result').innerHTML = "";
+			document.getElementById('result-image').innerHTML = "";
+			var query = document.getElementById('search-box').value;
+			var useBackup = document.getElementById('bk_up').checked;
+			var xhr = new XMLHttpRequest();
+			xhr.open('get', './p_crawler_backup.json',true);
+			xhr.send();
+			var docs = useBackup ?  '': getData();
+			var count = 0;
+			var results = filterResults(docs, query, type);
+			var pageResultElement = document.createElement('div');
+			var imageResultElement = document.createElement('div');
+			if (!type) {
+				document.getElementById('message').innerText = "Total Documents: Pages("
+					+ results.filter((i) => i.type === 'page').length + "), Images("
+					+ results.filter((i) => i.type === 'image').length + "), PDFs("
+					+ results.filter((i) => i.type === 'pdf').length + ")"
+				const tempResults = [
+					...results.filter((i) => i.type === 'image').slice(0, 10),
+					...results.filter((i) => i.type === 'page' || i.type === 'pdf')
+				]
+				results = tempResults;
+			} else {
+				document.getElementById('message').innerText = "Total Documents: " + results.length
+			}
+			results.forEach(r => {
+				if (r.type == 'pdf') {
+					const newElem = document.createElement('div');
+					newElem.className = 'result-item';
+					const thmb = document.createElement('img');
+					thmb.src = "./icons8-pdf-80.png";
+					thmb.className = "icon";
+					newElem.appendChild(thmb);
+					const pageDescriptor = document.createElement('div')
+					const anchor = document.createElement('a');
+					anchor.appendChild(document.createTextNode(r.title));
+					anchor.href = r.url;
+					anchor.target = '_blank'
+					pageDescriptor.appendChild(anchor);
+					const body = document.createElement('p');
+					body.appendChild(document.createTextNode(r.meta_description || r.body_content.substring(0, 300) + ' ...'));
+					pageDescriptor.appendChild(body);
+					newElem.appendChild(pageDescriptor)
+					pageResultElement.appendChild(newElem);
+					count++;
+				} else if (r.type == 'page') {
+					const newElem = document.createElement('div');
+					newElem.className = 'result-item';
+					const thmb = document.createElement('img');
+					thmb.src = "data:image/png;base64, " + r.thumbnail
+					thmb.className = "thumbnail";
+					newElem.appendChild(thmb);
+					const pageDescriptor = document.createElement('div')
+					const anchor = document.createElement('a');
+					anchor.appendChild(document.createTextNode(r.title));
+					anchor.href = r.url;
+					anchor.target = '_blank'
+					pageDescriptor.appendChild(anchor);
+					const body = document.createElement('p');
+					body.appendChild(document.createTextNode(r.meta_description?.length > 100 ?
+						r.meta_description : r.body_content.substring(0, 300) + ' ...'));
+					pageDescriptor.appendChild(body);
+					newElem.appendChild(pageDescriptor)
+					pageResultElement.appendChild(newElem);
+					count++;
+				} else if (r.type == 'image') {
+					const newElem = document.createElement('div');
+					const img = document.createElement('img');
+					img.src = r.url;
+					img.className = 'result-img'
+					const imgLink = document.createElement('a');
+					imgLink.href = r.url;
+					imgLink.target = '_blank'
+					imgLink.appendChild(img);
+					newElem.appendChild(imgLink);
+					const anchor = document.createElement('a')
+					anchor.appendChild(document.createTextNode(r.title || "<no-title>"));
+					anchor.href = r.links?.[0];
+					anchor.target = '_blank'
+					newElem.appendChild(anchor);
+					newElem.className = 'image-container'
+					imageResultElement.appendChild(newElem);
+					count++;
+				}
+			});
+			document.getElementById('result-image').innerHTML = imageResultElement.innerHTML;
+			document.getElementById('result').innerHTML = pageResultElement.innerHTML;
+			document.getElementById('common_spinner').classList.add('hidden');
+		};
+    </script>
+</head>
+<body>
+<div class="nav-bar">
+    <div class="crawler">
+<!--        <button id="crawl_btn" onclick="crawl()">-->
+<!--            <span id="crawl_btn_label">Crawl Site</span>-->
+<!--            <span id="spinner" class="spinner rotate hidden"></span>-->
+<!--        </button>-->
+        <span id="message"></span>
+        <span id="common_spinner" class="spinner rotate hidden"></span>
+    </div>
+    <div>
+        <div class="search-bar">
+            <label for="search-box">Search Text</label>
+            <input id="search-box" placeholder="Search..."/>
+            <button onclick="showLoading();search()">All</button>
+            <button onclick="showLoading();search('page');">Pages</button>
+            <button onclick="showLoading();search('image')">Images</button>
+            <button onclick="showLoading();search('pdf')">PDFs</button>
+            <label><input id="bk_up" type="checkbox"/>Large DataSet</label>
+        </div>
+    </div>
+</div>
+<div id="result-image" class="result-image-only"></div>
+<div id="result" class="result"></div>
+</body>
+</html>
